@@ -26,10 +26,13 @@ module Angus
         @private_key = settings[:private_key] || DEFAULT_PRIVATE_KEY
         @authenticator = settings[:authenticator] || DefaultAuthenticator.new(@private_key)
         @store = RedisStore.new(settings[:store] || {})
+        @excluded_regexps = settings[:excluded_regexps] || []
         @env = env
       end
 
       def authenticate!
+        return unless should_authenticate?
+
         if has_session?
           authenticate_session
         else
@@ -38,6 +41,8 @@ module Angus
       end
 
       def update_response_header(response)
+        return unless should_authenticate?
+
         headers = response[1]
 
         session_data = @store.get_session_data(session_id)
@@ -46,6 +51,16 @@ module Angus
       end
 
       private
+
+      def should_authenticate?
+        return true if @excluded_regexps.empty?
+
+        @excluded_regexps.none? { |regexp| request_path.match(regexp) }
+      end
+
+      def request_path
+        @env[PATH_HEADER]
+      end
 
       def has_session?
         @store.has_key?(session_id)
@@ -87,12 +102,12 @@ module Angus
       end
 
       def authorization_data_present?
-        @env['HTTP_DATE'] != nil && @env[AUTHENTICATION_HEADER] != nil &&
+        @env[DATE_HEADER] != nil && @env[AUTHENTICATION_HEADER] != nil &&
           extract_session_id(@env[AUTHENTICATION_HEADER]) != nil
       end
 
       def session_data_present?
-        @env['HTTP_DATE'] != nil && @env[BAAS_AUTHENTICATION_HEADER] != nil &&
+        @env[DATE_HEADER] != nil && @env[BAAS_AUTHENTICATION_HEADER] != nil &&
           extract_session_id(@env[BAAS_AUTHENTICATION_HEADER]) != nil
       end
 

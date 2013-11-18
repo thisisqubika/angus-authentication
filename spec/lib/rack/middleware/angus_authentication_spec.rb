@@ -8,22 +8,23 @@ require 'lib/angus-authentication'
 describe Rack::Middleware::AngusAuthentication do
   include Rack::Test::Methods
 
+  let(:settings) { {} }
   let(:application) { double(:application) }
 
   def app
-    Rack::Middleware::AngusAuthentication.new(application)
+    Rack::Middleware::AngusAuthentication.new(application, settings)
   end
 
   let(:headers) { {} }
 
   def make_request
     headers.each { |k,v | header(k, v) }
-    get '/'
+    get '/authenticated'
   end
 
   let(:public_key) { 'sadsadasdoi212ekjzXclmn3l24e' }
   let(:private_key) { 'CHANGE ME!!' }
-  let(:path_info) { '/' }
+  let(:path_info) { '/authenticated' }
   let(:auth_data) { "#{date.httpdate}\nGET\n#{path_info}" }
 
   let(:auth_token) { Digest::SHA1.hexdigest("#{private_key}\n#{auth_data}")  }
@@ -50,6 +51,24 @@ describe Rack::Middleware::AngusAuthentication do
 
       end
 
+      context 'when a excluded regexp' do
+        let(:settings) { { :excluded_regexps => %w(authenticated) } }
+
+        it 'invokes the application' do
+          make_request
+
+          application.should have_received(:call).once
+        end
+
+        describe 'the response' do
+
+          subject(:response) { make_request; last_response }
+
+          its(:status) { should eq(200) }
+          its(['X-Baas-Session-Seed']) { should_not be }
+
+        end
+      end
     end
 
     context 'when date header' do
@@ -135,7 +154,7 @@ describe Rack::Middleware::AngusAuthentication do
         let!(:session_private_key) do
           header('date', date.httpdate)
           header('Authorization', "#{public_key}:#{auth_token}")
-          get '/'
+          get '/authenticated'
           private_session_key_seed = last_response.header['X-Baas-Session-Seed']
 
           Digest::SHA1.hexdigest("#{private_key}\n#{private_session_key_seed}")

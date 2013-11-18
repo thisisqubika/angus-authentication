@@ -15,6 +15,10 @@ module Rack
       end
 
       def call(env)
+        dup.call!(env)
+      end
+
+      def call!(env)
         authentication_provider = Angus::Authentication::Provider.new(@authentication_settings, env)
 
         authentication_provider.authenticate!
