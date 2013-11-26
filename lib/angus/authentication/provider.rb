@@ -85,6 +85,7 @@ module Angus
 
       def authenticate_session
         raise MissingAuthorizationData unless session_data_present?
+
         if session_expired? && authorization_data_present?
           start_session && return
         elsif session_expired?
@@ -113,6 +114,7 @@ module Angus
 
       def session_expired?
         session_data = @store.get_session_data(session_id)
+
         created_at = Time.iso8601(session_data['created_at'])
 
         (created_at + @session_ttl) < Time.now
