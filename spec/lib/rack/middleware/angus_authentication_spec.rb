@@ -8,7 +8,8 @@ require 'lib/angus-authentication'
 describe Rack::Middleware::AngusAuthentication do
   include Rack::Test::Methods
 
-  let(:settings) { {} }
+  let(:settings) { { :private_key => private_key, :public_key => public_key,
+                     :max_failed_attempts => max_failed_attempts } }
   let(:application) { double(:application) }
 
   def app
@@ -26,6 +27,7 @@ describe Rack::Middleware::AngusAuthentication do
   let(:private_key) { 'CHANGE ME!!' }
   let(:path_info) { '/authenticated' }
   let(:auth_data) { "#{date.httpdate}\nGET\n#{path_info}" }
+  let(:max_failed_attempts) { 3 }
 
   let(:auth_token) { Digest::SHA1.hexdigest("#{private_key}\n#{auth_data}")  }
   let(:date) { Date.today }
@@ -183,18 +185,44 @@ describe Rack::Middleware::AngusAuthentication do
           let(:headers) { { 'date' => date.httpdate,
                             'X-Baas-Auth' => "#{public_key}:#{auth_token}" } }
 
-          it 'does not invoke the application' do
-            make_request
+          context 'when the max failed attempts is reached' do
 
-            application.should have_received(:call).once
+            before do
+              max_failed_attempts.times do
+                make_request
+              end
+            end
+
+            it 'does not invoke the application' do
+              make_request
+
+              application.should have_received(:call).exactly(max_failed_attempts + 1).times
+            end
+
+            describe 'the response' do
+
+              subject(:response) { make_request; last_response }
+
+              its(:status) { should eq(401) }
+
+            end
           end
 
-          describe 'the response' do
+          context 'when the max failed attempts has not been reached' do
+            it 'invokes the application' do
+              make_request
 
-            subject(:response) { make_request; last_response }
+              application.should have_received(:call).twice
+            end
 
-            its(:status) { should eq(401) }
+            describe 'the response' do
 
+              subject(:response) { make_request; last_response }
+
+              its(:status) { should eq(200) }
+              its(['X-Baas-Session-Seed']) { should_not be_empty }
+
+            end
           end
         end
 
