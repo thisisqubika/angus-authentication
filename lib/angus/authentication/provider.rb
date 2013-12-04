@@ -27,7 +27,7 @@ module Angus
         @session_ttl = settings[:session_ttl] || DEFAULT_SESSION_TTL
         @private_key = settings[:private_key] || DEFAULT_PRIVATE_KEY
         @max_failed_attempts = settings[:max_failed_attempts] || MAX_FAILED_SESSION_AUTH_ATTEMPTS
-        @use_session = settings[:use_session] || DEFAULT_USE_SESSION
+        @use_session = settings[:use_session]
         @authenticator = settings[:authenticator] || DefaultAuthenticator.new(@private_key)
         @store = RedisStore.new(settings[:store] || {})
         @excluded_regexps = settings[:excluded_regexps] || []
@@ -37,7 +37,7 @@ module Angus
       def authenticate!
         return unless should_authenticate?
 
-        if has_session?
+        if has_session? && use_session?
           authenticate_session
         else
           start_session
@@ -45,7 +45,7 @@ module Angus
       end
 
       def update_response_header(response)
-        return unless should_authenticate?
+        return unless use_session? && should_authenticate?
 
         headers = response[1]
 
@@ -55,6 +55,10 @@ module Angus
       end
 
       private
+
+      def use_session?
+        @use_session || DEFAULT_USE_SESSION
+      end
 
       def should_authenticate?
         return true if @excluded_regexps.empty?
@@ -103,14 +107,14 @@ module Angus
         private_session_key, private_session_key_seed = get_session_credentials
 
         failed_attempts_count = get_session_data['failed_attempts_count']
-      
+
         session_data = {
           'private_key' => private_session_key,
           'key_seed' => private_session_key_seed,
           'created_at' => Time.now.iso8601,
           'failed_attempts_count' => failed_attempts_count + 1
         }
-      
+
         set_session_data(session_data)
       end
 
@@ -132,7 +136,7 @@ module Angus
       def set_session_data(session_data)
         @store.save_session_data(session_id, session_data, @session_id_ttl + @session_ttl)
       end
-      
+
       def valid_session_token?
         private_key = get_session_data['private_key']
         Digest::SHA1.hexdigest("#{private_key}\n#{auth_data}") == session_auth_token
@@ -141,7 +145,7 @@ module Angus
       def get_session_data
         @store.get_session_data(session_id)
       end
-      
+
       def authorization_data_present?
         @env[DATE_HEADER] != nil && @env[AUTHENTICATION_HEADER] != nil &&
           extract_session_id(@env[AUTHENTICATION_HEADER]) != nil
