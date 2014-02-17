@@ -216,7 +216,7 @@ describe Rack::Middleware::AngusAuthentication do
           end
         end
 
-        context 'when a session is present' do
+        context 'and a session is present' do
           let!(:session_private_key) do
             header('date', date.httpdate)
             header('Authorization', "#{public_key}:#{auth_token}")
@@ -246,21 +246,15 @@ describe Rack::Middleware::AngusAuthentication do
           end
 
           context 'when invalid session authentication data' do
-            let(:headers) { { 'date' => date.httpdate,
-                              'X-Baas-Auth' => "#{public_key}:#{auth_token}" } }
-
-            context 'when the max failed attempts is reached' do
-
-              before do
-                max_failed_attempts.times do
-                  make_request
-                end
-              end
+            context 'and authentication data missing' do
+              let(:headers) { { 'date' => date.httpdate,
+                                'X-Baas-Auth' => "#{public_key}:invalid",
+                                'Authorization' => nil } }
 
               it 'does not invoke the application' do
                 make_request
 
-                application.should have_received(:call).exactly(max_failed_attempts + 1).times
+                application.should have_received(:call).once
               end
 
               describe 'the response' do
@@ -272,7 +266,11 @@ describe Rack::Middleware::AngusAuthentication do
               end
             end
 
-            context 'when the max failed attempts has not been reached' do
+            context 'but authentication data is present' do
+              let(:headers) { { 'date' => date.httpdate,
+                                'X-Baas-Auth' => "#{public_key}:invalid",
+                                'Authorization' => "#{public_key}:#{auth_token}" } }
+
               it 'invokes the application' do
                 make_request
 
@@ -290,10 +288,10 @@ describe Rack::Middleware::AngusAuthentication do
             end
           end
 
-          context 'when the session has timed out' do
+          context 'and the session has timed out' do
             before { Timecop.travel(Angus::Authentication::Provider::DEFAULT_SESSION_TTL + 10) }
 
-            context 'when missing authentication data' do
+            context 'and authentication data missing' do
               let(:session_auth_token) {
                 Digest::SHA1.hexdigest("#{session_private_key}\n#{auth_data}")
               }

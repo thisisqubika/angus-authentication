@@ -12,7 +12,6 @@ module Angus
       DEFAULT_ID_TTL                    = 60 * 60
       DEFAULT_SESSION_TTL               = 60 * 60
       DEFAULT_PRIVATE_KEY               = 'change_me'
-      MAX_FAILED_SESSION_AUTH_ATTEMPTS  = 10
       DEFAULT_USE_SESSION               = false
 
       AUTHENTICATION_HEADER             = 'HTTP_AUTHORIZATION'
@@ -26,7 +25,6 @@ module Angus
         @session_id_ttl = settings[:session_id_ttl] || DEFAULT_ID_TTL
         @session_ttl = settings[:session_ttl] || DEFAULT_SESSION_TTL
         @private_key = settings[:private_key] || DEFAULT_PRIVATE_KEY
-        @max_failed_attempts = settings[:max_failed_attempts] || MAX_FAILED_SESSION_AUTH_ATTEMPTS
         @use_session = settings[:use_session]
         @authenticator = settings[:authenticator] || DefaultAuthenticator.new(@private_key)
         @store = RedisStore.new(settings[:store] || {})
@@ -49,9 +47,7 @@ module Angus
 
         headers = response[1]
 
-        session_data = @store.get_session_data(session_id)
-
-        headers[BAAS_SESSION_HEADER] = session_data['key_seed']
+        headers[BAAS_SESSION_HEADER] = get_session_data['key_seed']
       end
 
       private
@@ -80,8 +76,7 @@ module Angus
         session_data = {
           'private_key' => private_session_key,
           'key_seed' => private_session_key_seed,
-          'created_at' => Time.now.iso8601,
-          'failed_attempts_count' => 0
+          'created_at' => Time.now.iso8601
         }
 
         set_session_data(session_data)
@@ -91,35 +86,14 @@ module Angus
         raise MissingAuthorizationData unless session_data_present?
 
         if session_expired? && authorization_data_present?
-          start_session && return
+          start_session
         elsif session_expired?
           raise AuthorizationTimeout
-        end
-
-        if !valid_session_token? && failed_attempts_exceed?
+        elsif !valid_session_token? && authorization_data_present?
+          start_session
+        elsif !valid_session_token?
           raise InvalidAuthorizationData
-        elsif !failed_attempts_exceed?
-          revalidate_session && return
         end
-      end
-
-      def revalidate_session
-        private_session_key, private_session_key_seed = get_session_credentials
-
-        failed_attempts_count = get_session_data['failed_attempts_count']
-
-        session_data = {
-          'private_key' => private_session_key,
-          'key_seed' => private_session_key_seed,
-          'created_at' => Time.now.iso8601,
-          'failed_attempts_count' => failed_attempts_count + 1
-        }
-
-        set_session_data(session_data)
-      end
-
-      def failed_attempts_exceed?
-        get_session_data['failed_attempts_count'] >= @max_failed_attempts
       end
 
       def get_session_credentials
@@ -157,9 +131,7 @@ module Angus
       end
 
       def session_expired?
-        session_data = @store.get_session_data(session_id)
-
-        created_at = Time.iso8601(session_data['created_at'])
+        created_at = Time.iso8601(get_session_data['created_at'])
 
         (created_at + @session_ttl) < Time.now
       end

@@ -3,14 +3,14 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'angus/authentication/version'
 
 Gem::Specification.new do |spec|
-  spec.name            = 'angus-authentication'
-  spec.version         = Angus::Authentication::VERSION
-  spec.platform        = Gem::Platform::RUBY
-  spec.authors         = ['Adrian Gomez']
-  spec.summary         = 'Offers authentication for rack applications.'
-  spec.email           = %w[angus@moove-it.com]
-  spec.homepage      = 'http://mooveit.github.io/angus-authentication'
-  spec.license       = 'MIT'
+  spec.name           = 'angus-authentication'
+  spec.version        = Angus::Authentication::VERSION
+  spec.platform       = Gem::Platform::RUBY
+  spec.authors        = ['Adrian Gomez']
+  spec.summary        = 'Offers authentication for rack applications.'
+  spec.email          = %w[angus@moove-it.com]
+  spec.homepage       = 'https://github.com/Moove-it/angus-authentication'
+  spec.license        = 'MIT'
 
   spec.files           = Dir.glob('{lib}/**/*')
 
