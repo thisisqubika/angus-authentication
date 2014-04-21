@@ -226,9 +226,9 @@ describe Rack::Middleware::AngusAuthentication do
             Digest::SHA1.hexdigest("#{private_key}\n#{private_session_key_seed}")
           end
 
-          context 'when missing X-Baas-Auth header' do
+          context 'when missing Authorization and X-Baas-Auth header' do
             let(:headers) { { 'date' => date.httpdate,
-                              'Authorization' => "#{public_key}:#{auth_token}" } }
+                              'Authorization' => nil } }
 
             it 'does not invoke the application' do
               make_request
@@ -241,6 +241,25 @@ describe Rack::Middleware::AngusAuthentication do
               subject(:response) { make_request; last_response }
 
               its(:status) { should eq(401) }
+
+            end
+          end
+
+          context 'when just missing X-Baas-Auth header' do
+            let(:headers) { { 'date' => date.httpdate,
+                              'Authorization' => "#{public_key}:#{auth_token}" } }
+
+            it 'invokes the application' do
+              make_request
+
+              application.should have_received(:call).twice
+            end
+
+            describe 'the response' do
+
+              subject(:response) { make_request; last_response }
+
+              its(:status) { should eq(200) }
 
             end
           end

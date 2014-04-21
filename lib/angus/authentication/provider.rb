@@ -83,7 +83,7 @@ module Angus
       end
 
       def authenticate_session
-        raise MissingAuthorizationData unless session_data_present?
+        raise MissingAuthorizationData unless session_data_present? || authorization_data_present?
 
         if session_expired? && authorization_data_present?
           start_session
