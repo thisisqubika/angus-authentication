@@ -16,7 +16,7 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency('rack', '~> 1.5')
   spec.add_dependency('redis')
-  spec.add_dependency('bcrypt-ruby', '~> 3')
+  spec.add_dependency('bcrypt', '~> 3')
   spec.add_dependency('connection_pool', '~> 1.2')
 
   spec.add_development_dependency('rake', '~> 10.1')
