@@ -6,7 +6,7 @@ Gem::Specification.new do |spec|
   spec.name           = 'angus-authentication'
   spec.version        = Angus::Authentication::VERSION
   spec.platform       = Gem::Platform::RUBY
-  spec.authors        = ['Adrian Gomez']
+  spec.authors        = ['Adrian Gomez', 'Lucas Aragno']
   spec.summary        = 'Offers authentication for rack applications.'
   spec.email          = %w[angus@moove-it.com]
   spec.homepage       = 'https://github.com/Moove-it/angus-authentication'
