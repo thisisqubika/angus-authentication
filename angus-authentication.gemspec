@@ -14,10 +14,10 @@ Gem::Specification.new do |spec|
 
   spec.files           = Dir.glob('{lib}/**/*')
 
-  spec.add_dependency('rack', '~> 1.5')
+  spec.add_dependency('rack')
   spec.add_dependency('redis')
-  spec.add_dependency('bcrypt', '~> 3')
-  spec.add_dependency('connection_pool', '~> 1.2')
+  spec.add_dependency('bcrypt')
+  spec.add_dependency('connection_pool')
 
   spec.add_development_dependency('rake', '~> 10.1')
   spec.add_development_dependency('rspec', '~> 2.14')
